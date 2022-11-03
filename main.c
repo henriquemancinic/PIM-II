@@ -13,8 +13,8 @@ Dicionario das funcoes:
         menuInferior(int <tamanho do corpo>);
 */
 
-int i, indice, indiceClientes = 0;
-int ic_logado, qtdLinhas, id_funcionario = 0;
+int i, indice, indiceClientes, ic_logado, qtdLinhas, id_funcionario = 0;
+char resposta;
 
 /*typedef struct tp_data_contratacao
 {
@@ -86,7 +86,7 @@ int leArqClientes()
 {
     FILE *ptrArq;
     // Registro de cadastro
-    ptrArq = fopen("registroClientes.txt", "r");
+    ptrArq = fopen("registroClientes.txt", "a+");
 
     char *ptrString;
     char strLinha[500];
@@ -107,22 +107,19 @@ int leArqClientes()
         no primeiro token com a linha(string) e depois que ele passa no primeiro looping ele procura o null e parte para outro token e assim vai ate acabar a linha
         primeiro token ID, segundo NOME, terceito LOGIN, quarto SENHA e por �ltimo tipoFUNCIONARIO, sendo 0 FUNDADOR e 1 FUNCIONARIO.
         */
-        if (qtdLinhas != 0)
+        for (i = 0; i < qtdLinhas; i++)
         {
-            for (i = 0; i <= qtdLinhas; i++)
-            {
-                ptrString = strtok(fgets(strLinha, 100, ptrArq), "|");
-                // como o arquivo eh texto, temos que converter a string em int usando a funcao atoi().
-                clientes[i].cd_id = atoi(ptrString);
-                ptrString = strtok(NULL, "|");
-                strcpy(clientes[i].nm_cliente, &ptrString);
-                ptrString = strtok(NULL, "|");
-                strcpy(clientes[i].ds_servico, &ptrString);
-                ptrString = strtok(NULL, "|");
-                clientes[i].cd_id_funcionario = atoi(ptrString);
-            }
-            indiceClientes = qtdLinhas + 1;
-        };
+            ptrString = strtok(fgets(strLinha, 100, ptrArq), "|");
+            // como o arquivo eh texto, temos que converter a string em int usando a funcao atoi().
+            clientes[i].cd_id = atoi(ptrString);
+            ptrString = strtok(NULL, "|");
+            strcpy(clientes[i].nm_cliente, ptrString);
+            ptrString = strtok(NULL, "|");
+            strcpy(clientes[i].ds_servico, ptrString);
+            ptrString = strtok(NULL, "|\n");
+            clientes[i].cd_id_funcionario = atoi(ptrString);
+        }
+        indiceClientes = qtdLinhas;
     }
 
     else
@@ -230,6 +227,26 @@ void menuFundadores()
     menuCorpo(TAM_CORPO_MENU, "[3] - Listar todos os funcionarios");
     menuCorpo(TAM_CORPO_MENU, "[x] - Fechar sistema");
     menuInferior(TAM_CORPO_MENU);
+
+    printf("\nITEM: ");
+    scanf(" %c", &resposta);
+
+    switch (resposta)
+    {
+    case '1':
+        cadastrar_funcionarios();
+        break;
+    case '2':
+        buscar_clientes();
+        break;
+    case '3':
+        buscar_funcionarios();
+        break;
+    case 'z':
+        ic_logado = 0;
+        system("cls");
+        main();
+    }
 }
 
 void menuRecepcionista()
@@ -242,6 +259,24 @@ void menuRecepcionista()
     menuCorpo(largMenu, "[2] - Listar todos os clientes");
     menuCorpo(largMenu, "[x] - Fechar sistema");
     menuInferior(largMenu);
+
+    printf("\nITEM: ");
+    scanf(" %c", &resposta);
+
+    switch (resposta)
+    {
+    case '1':
+        cadastrar_clientes();
+        break;
+    case '2':
+        buscar_clientes();
+        break;
+    case 'z':
+        ic_logado = 0;
+        system("cls");
+        main();
+        break;
+    }
 }
 
 int login()
@@ -307,10 +342,11 @@ void cadastrar_clientes();
 
 int main()
 {
+    // inicializa/percorre arquivo de clientes
+    leArqClientes();
+
     while (ic_logado == 0)
     {
-        //inicializa/percorre arquivo de clientes
-        leArqClientes();
         login();
     }
 
@@ -319,7 +355,7 @@ int main()
     {
         menuFundadores();
     }
-    else if(funcionarios[id_funcionario].tp_funcionario == 1)
+    else if (funcionarios[id_funcionario].tp_funcionario == 1)
     {
         menuRecepcionista();
     }
@@ -327,10 +363,10 @@ int main()
     return 0;
 }
 
-void buscar_funcionarios(int qtd_funcionarios)
+void buscar_funcionarios()
 {
     // verificar essa l�gica // começar em 1 para eliminar de mostrar os usuarios fundadores
-    for (i = 1; i <= qtd_funcionarios; i++)
+    for (i = 1; i <= indice; i++)
     {
         if (funcionarios[i].tp_funcionario == 1)
         {
@@ -342,7 +378,22 @@ void buscar_funcionarios(int qtd_funcionarios)
         }
     }
     system("pause");
-    menuFundadores();
+    main();
+}
+
+void buscar_clientes()
+{
+    // verificar essa l�gica // começar em 1 para eliminar de mostrar os usuarios fundadores
+    for (i = 0; i < indiceClientes; i++)
+    {
+        printf("\n::----------------------------------------------::");
+        printf("\n:: %d", clientes[i].cd_id);
+        printf("\n:: %s", clientes[i].nm_cliente);
+        printf("\n:: %s", clientes[i].ds_servico);
+        printf("\n:: %d", clientes[i].cd_id_funcionario);
+        printf("\n::----------------------------------------------::\n");
+    }
+    system("pause");
     main();
 }
 
@@ -359,7 +410,6 @@ void cadastrar_funcionarios()
     armazenaFuncionario();
     indice++;
     system("pause");
-    menuFundadores();
     main();
 }
 
@@ -376,6 +426,5 @@ void cadastrar_clientes()
     armazenaCliente();
     indiceClientes++;
     system("pause");
-    menuRecepcionista();
     main();
 }
