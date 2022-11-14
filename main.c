@@ -4,7 +4,136 @@
 #include <string.h>
 #define TAM_CORPO_LOGIN 30
 #define TAM_CORPO_MENU 51
+//definindo o tamanho da login senha, maximo 20 caracteres
+#define qtdMax 21
 
+char polibio[6][6] = {{'a', 'b', 'c', 'd', 'e', 'f'},
+                      {'g', 'h', 'i', 'j', 'k', 'l'},
+                      {'m', 'n', 'o', 'p', 'q', 'r'},
+                      {'s', 't', 'u', 'v', 'w', 'x'},
+                      {'y', 'z', '0', '1', '2', '3'},
+                      {'4', '5', '6', '7', '8', '9'}};
+int linhaColuna[qtdMax * 2];
+
+void criptografa(char strMensagem[])
+{
+    int linha = 0;
+    int coluna = 0;
+    int i = 0;
+    int indice = 0;
+    // vai criptografando ate chegar o fim da mensagem 0
+    while (strMensagem[i] != 0)
+    {
+        for (linha = 0; linha <= 5; linha++)
+        {
+            for (coluna = 0; coluna <= 5; coluna++)
+            {
+                if (strMensagem[i] == polibio[linha][coluna])
+                {
+                    linhaColuna[indice] = linha;
+                    indice++;
+                    linhaColuna[indice] = coluna;
+                    indice++;
+                    i++;
+                    // seto as variaveis para 5 para resetar os laços de coluna e de linha pois ja foi localizada o char da mensagem.
+                    linha = 5;
+                    coluna = 5;
+                };
+            }
+        }
+    }
+
+    for (i = 0; i < indice; i++)
+    {
+        strMensagem[i] = linhaColuna[i] + '0';
+    }
+    //limpando o resto da variavel 
+    for (i = indice; i < strlen(strMensagem); i++)
+    {
+        strMensagem[i] ='\0';
+    }
+}
+
+void descriptografa(char strMensagem[])
+{
+    int indice = 0;
+    int linha = 0;
+    int coluna = 1;
+    int i;
+
+    // convertendo toda a mensagem que está char para int até o final da mensagem e atribui a um vetor de int.
+    for (i = 0; strMensagem[i] != '\0'; i++)
+    {
+        // se o primeiro char for par ''
+        if (indice % 2 == 0)
+        {
+            switch (strMensagem[i])
+            {
+            case '0':
+                linhaColuna[i] = 0;
+                break;
+            case '1':
+                linhaColuna[i] = 1;
+                break;
+            case '2':
+                linhaColuna[i] = 2;
+                break;
+            case '3':
+                linhaColuna[i] = 3;
+                break;
+            case '4':
+                linhaColuna[i] = 4;
+                break;
+            case '5':
+                linhaColuna[i] = 5;
+                break;
+            case '6':
+                linhaColuna[i] = 6;
+                break;
+            }
+        }
+        else
+        {
+            switch (strMensagem[i])
+            {
+            case '0':
+                linhaColuna[i] = 0;
+                break;
+            case '1':
+                linhaColuna[i] = 1;
+                break;
+            case '2':
+                linhaColuna[i] = 2;
+                break;
+            case '3':
+                linhaColuna[i] = 3;
+                break;
+            case '4':
+                linhaColuna[i] = 4;
+                break;
+            case '5':
+                linhaColuna[i] = 5;
+                break;
+            case '6':
+                linhaColuna[i] = 6;
+                break;
+            }
+        }
+        indice++;
+    }
+    indice = indice / 2;
+    for (i = 0; i < indice; i++)
+    {
+        strMensagem[i] = polibio[linhaColuna[linha]][linhaColuna[coluna]];
+        linha = linha + 2;
+        coluna = coluna + 2;
+    }
+    // limpando o restante da variável
+    for (i = indice; i < (indice * 2); i++)
+    {
+        strMensagem[i] = 0;
+    }
+}
 /*
 Dicionario das funcoes:
     funcoes vazias com parametros
@@ -82,7 +211,7 @@ void armazenaCliente()
     fclose(ptrArq);
 }
 
-int leArqClientes()
+void leArqClientes()
 {
     FILE *ptrArq;
     // Registro de cadastro
@@ -123,12 +252,12 @@ int leArqClientes()
     }
 
     else
-        printf("\nFalha ao criar ou editar o arquivo!\n");
+        printf("\nFalha ao ler arquivo!\n");
     // fechando o arquivo
     fclose(ptrArq);
 }
 
-int leArqLogin()
+void leArqLogin()
 {
     FILE *ptrArq;
     // Registro de cadastro
@@ -172,7 +301,7 @@ int leArqLogin()
     }
 
     else
-        printf("\nFalha ao criar ou editar o arquivo!\n");
+        printf("\nFalha ao ler o arquivo!\n");
     // fechando o arquivo
     fclose(ptrArq);
 }
@@ -227,26 +356,6 @@ void menuFundadores()
     menuCorpo(TAM_CORPO_MENU, "[3] - Listar todos os funcionarios");
     menuCorpo(TAM_CORPO_MENU, "[x] - Fechar sistema");
     menuInferior(TAM_CORPO_MENU);
-
-    printf("\nITEM: ");
-    scanf(" %c", &resposta);
-
-    switch (resposta)
-    {
-    case '1':
-        cadastrar_funcionarios();
-        break;
-    case '2':
-        buscar_clientes();
-        break;
-    case '3':
-        buscar_funcionarios();
-        break;
-    case 'z':
-        ic_logado = 0;
-        system("cls");
-        main();
-    }
 }
 
 void menuRecepcionista()
@@ -259,24 +368,6 @@ void menuRecepcionista()
     menuCorpo(largMenu, "[2] - Listar todos os clientes");
     menuCorpo(largMenu, "[x] - Fechar sistema");
     menuInferior(largMenu);
-
-    printf("\nITEM: ");
-    scanf(" %c", &resposta);
-
-    switch (resposta)
-    {
-    case '1':
-        cadastrar_clientes();
-        break;
-    case '2':
-        buscar_clientes();
-        break;
-    case 'z':
-        ic_logado = 0;
-        system("cls");
-        main();
-        break;
-    }
 }
 
 int login()
@@ -302,6 +393,7 @@ int login()
     // Adiciona ║ antes e depois de pedir senha
     printf("%c", 186);
     scanf("%s", &senha);
+    
     printf("%c", 186);
     // preenche um linha somente de espaco
     for (i = 0; i < TAM_CORPO_LOGIN; i++)
@@ -313,14 +405,15 @@ int login()
 
     // percorre o arquivo e atribui os conteudos em struct
     leArqLogin();
-
+    
     // percorremos a struct funcionarios para validar o login
     for (i = 0; i <= qtdLinhas; i++)
     {
+        descriptografa(funcionarios[i].ds_senha);
         if (strcmp(funcionarios[i].ds_login, login) == 0 && strcmp(funcionarios[i].ds_senha, senha) == 0)
         {
-            ic_logado = 1;
             id_funcionario = funcionarios[i].cd_id;
+            return 1;
         }
     }
 
@@ -335,45 +428,31 @@ int login()
     }
 }
 
-void buscar_funcionarios();
-void cadastrar_funcionarios();
-void buscar_clientes();
-void cadastrar_clientes();
-
-int main()
+int verificaLogin(char login[])
 {
-    // inicializa/percorre arquivo de clientes
-    leArqClientes();
-
-    while (ic_logado == 0)
+    //i vai ate indice (funcionarios)
+    for (i = 0; i < indice; i++)
     {
-        login();
+        if (strcmp(funcionarios[i].ds_login, login) == 0)
+        {
+            return 1;
+        }
     }
-
-    // verifica se eh fundador ou recepcionista
-    if (funcionarios[id_funcionario].tp_funcionario == 0)
-    {
-        menuFundadores();
-    }
-    else if (funcionarios[id_funcionario].tp_funcionario == 1)
-    {
-        menuRecepcionista();
-    }
-
     return 0;
 }
 
 void buscar_funcionarios()
 {
     // verificar essa l�gica // começar em 1 para eliminar de mostrar os usuarios fundadores
-    for (i = 1; i <= indice; i++)
+    for (i = 1; i < indice; i++)
     {
         if (funcionarios[i].tp_funcionario == 1)
         {
             printf("\n::----------------------------------------------::");
-            printf("\n:: %s", funcionarios[i].nm_funcionario);
-            printf("\n:: %s", funcionarios[i].ds_login);
-            printf("\n:: %s", funcionarios[i].ds_senha);
+            printf("\n::NOME: %s", funcionarios[i].nm_funcionario);
+            printf("\n::LOGIN: %s", funcionarios[i].ds_login);
+            descriptografa(funcionarios[i].ds_senha);
+            printf("\n::SENHA: %s", funcionarios[i].ds_senha);
             printf("\n::----------------------------------------------::\n");
         }
     }
@@ -396,16 +475,35 @@ void buscar_clientes()
     system("pause");
     main();
 }
+// falta chamar função descriptografar senha e verificar se login já existe no sistema para que nao tenha ambiguidade
 
 void cadastrar_funcionarios()
-{
+{ 
     system("cls");
-    printf("Nome do funcionario: \n");
-    scanf("%s", funcionarios[indice].nm_funcionario);
-    printf("Login: \n");
+    menuSuperior(TAM_CORPO_MENU+10,"REGRAS DE CADASTRO");
+    menuCorpo(TAM_CORPO_MENU+10,"-NOME --> NAO PODE SER MAIOR QUE 50 CARACTERES");
+    menuCorpo(TAM_CORPO_MENU+10,"-LOGIN E SENHA --> NAO PODEM SER MAIORES QUE 20 CARACTERES");
+    menuCorpo(TAM_CORPO_MENU+10,"-SENHA --> SOMENTE LETRAS MINUSCULAS E NUMEROS");
+    menuInferior(TAM_CORPO_MENU+10);
+
+    printf("\n");
+
+    printf("-----------------CADASTRAR");
+    printf("\nNome do Funcionario:");
+    // limpando o buffer
+    fflush(stdin);
+    gets(funcionarios[indice].nm_funcionario);
+    printf("Login:");
     scanf("%s", funcionarios[indice].ds_login);
-    printf("Senha: \n");
+    // chamando a função e verificando o login
+    while (verificaLogin(funcionarios[indice].ds_login) == 1)
+    {
+        printf("Login existente, digite um novo:");
+        scanf("%s", funcionarios[indice].ds_login);
+    };
+    printf("Senha:");
     scanf("%s", funcionarios[indice].ds_senha);
+    criptografa(funcionarios[indice].ds_senha);
     funcionarios[indice].tp_funcionario = 1;
     armazenaFuncionario();
     indice++;
@@ -427,4 +525,66 @@ void cadastrar_clientes()
     indiceClientes++;
     system("pause");
     main();
+}
+
+int main()
+{
+    system("cls");
+    // inicializa/percorre arquivo de clientes
+    leArqClientes();
+
+    while (ic_logado == 0)
+    {
+        ic_logado = login();
+    }
+
+    // verifica se eh fundador ou recepcionista
+    if (funcionarios[id_funcionario].tp_funcionario == 0)
+    {
+        menuFundadores();
+
+        printf("\nITEM: ");
+        scanf(" %c", &resposta);
+
+        switch (resposta)
+        {
+        case '1':
+            cadastrar_funcionarios();
+            break;
+        case '2':
+            buscar_clientes();
+            break;
+        case '3':
+            buscar_funcionarios();
+            break;
+        case 'z':
+            ic_logado = 0;
+            system("cls");
+            main();
+        }
+    }
+    else if (funcionarios[id_funcionario].tp_funcionario == 1)
+    {
+        menuRecepcionista();
+
+        printf("\nITEM: ");
+        scanf(" %c", &resposta);
+
+        switch (resposta)
+        {
+        case '1':
+            cadastrar_clientes();
+            break;
+        case '2':
+            buscar_clientes();
+            break;
+        case 'z':
+            ic_logado = 0;
+            system("cls");
+            main();
+            break;
+        }
+    }
+
+    return 0;
 }
