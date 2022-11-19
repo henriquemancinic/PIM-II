@@ -4,7 +4,19 @@
 #include <string.h>
 #define TAM_CORPO_LOGIN 30
 #define TAM_CORPO_MENU 51
-//definindo o tamanho da login senha, maximo 20 caracteres
+#include <winsock.h>
+
+#define BUFFER_SIZE 128
+
+int server = 0;
+
+char message[BUFFER_SIZE];
+
+struct sockaddr_in remote_address;
+
+WSADATA wsa_data;
+
+// definindo o tamanho da login senha, maximo 20 caracteres
 #define qtdMax 21
 
 char polibio[6][6] = {{'a', 'b', 'c', 'd', 'e', 'f'},
@@ -47,10 +59,10 @@ void criptografa(char strMensagem[])
     {
         strMensagem[i] = linhaColuna[i] + '0';
     }
-    //limpando o resto da variavel 
+    // limpando o resto da variavel
     for (i = indice; i < strlen(strMensagem); i++)
     {
-        strMensagem[i] ='\0';
+        strMensagem[i] = '\0';
     }
 }
 
@@ -354,6 +366,7 @@ void menuFundadores()
     menuCorpo(TAM_CORPO_MENU, "[1] - Cadastrar novo funcionario");
     menuCorpo(TAM_CORPO_MENU, "[2] - Listar todos os clientes");
     menuCorpo(TAM_CORPO_MENU, "[3] - Listar todos os funcionarios");
+    menuCorpo(TAM_CORPO_MENU, "[4] - Realizar backup");
     menuCorpo(TAM_CORPO_MENU, "[x] - Fechar sistema");
     menuInferior(TAM_CORPO_MENU);
 }
@@ -393,7 +406,7 @@ int login()
     // Adiciona ║ antes e depois de pedir senha
     printf("%c", 186);
     scanf("%s", &senha);
-    
+
     printf("%c", 186);
     // preenche um linha somente de espaco
     for (i = 0; i < TAM_CORPO_LOGIN; i++)
@@ -405,7 +418,7 @@ int login()
 
     // percorre o arquivo e atribui os conteudos em struct
     leArqLogin();
-    
+
     // percorremos a struct funcionarios para validar o login
     for (i = 0; i <= qtdLinhas; i++)
     {
@@ -430,7 +443,7 @@ int login()
 
 int verificaLogin(char login[])
 {
-    //i vai ate indice (funcionarios)
+    // i vai ate indice (funcionarios)
     for (i = 0; i < indice; i++)
     {
         if (strcmp(funcionarios[i].ds_login, login) == 0)
@@ -475,33 +488,32 @@ void buscar_clientes()
     system("pause");
     main();
 }
-// falta chamar função descriptografar senha e verificar se login já existe no sistema para que nao tenha ambiguidade
 
 void cadastrar_funcionarios()
-{ 
+{
     system("cls");
-    menuSuperior(TAM_CORPO_MENU+10,"REGRAS DE CADASTRO");
-    menuCorpo(TAM_CORPO_MENU+10,"-NOME --> NAO PODE SER MAIOR QUE 50 CARACTERES");
-    menuCorpo(TAM_CORPO_MENU+10,"-LOGIN E SENHA --> NAO PODEM SER MAIORES QUE 20 CARACTERES");
-    menuCorpo(TAM_CORPO_MENU+10,"-SENHA --> SOMENTE LETRAS MINUSCULAS E NUMEROS");
-    menuInferior(TAM_CORPO_MENU+10);
+    menuSuperior(TAM_CORPO_MENU + 10, "REGRAS DE CADASTRO");
+    menuCorpo(TAM_CORPO_MENU + 10, "-NOME --> NAO PODE SER MAIOR QUE 50 CARACTERES");
+    menuCorpo(TAM_CORPO_MENU + 10, "-LOGIN E SENHA --> NAO PODEM SER MAIORES QUE 20 CARACTERES");
+    menuCorpo(TAM_CORPO_MENU + 10, "-SENHA --> SOMENTE LETRAS MINUSCULAS E NUMEROS");
+    menuInferior(TAM_CORPO_MENU + 10);
 
     printf("\n");
 
     printf("-----------------CADASTRAR");
-    printf("\nNome do Funcionario:");
+    printf("\nNome do Funcionario: ");
     // limpando o buffer
     fflush(stdin);
     gets(funcionarios[indice].nm_funcionario);
-    printf("Login:");
+    printf("Login: ");
     scanf("%s", funcionarios[indice].ds_login);
     // chamando a função e verificando o login
     while (verificaLogin(funcionarios[indice].ds_login) == 1)
     {
-        printf("Login existente, digite um novo:");
+        printf("Login existente, digite um novo: ");
         scanf("%s", funcionarios[indice].ds_login);
     };
-    printf("Senha:");
+    printf("Senha: ");
     scanf("%s", funcionarios[indice].ds_senha);
     criptografa(funcionarios[indice].ds_senha);
     funcionarios[indice].tp_funcionario = 1;
@@ -527,6 +539,60 @@ void cadastrar_clientes()
     main();
 }
 
+// função para abrir um cliente e enviar os arquivos para o servidor salvar.
+void backupArquivosSOCKET()
+{
+    WSAStartup(MAKEWORD(2, 0), &wsa_data);
+    //(comunicação ipv4, protocolo TCP,0)
+    int server = socket(AF_INET, SOCK_STREAM, 0);
+    int porta = 80;
+
+    // preenchendo o remote_address (servidor)
+    memset(&remote_address, 0, sizeof(remote_address));
+    // Estamos lidando com ipv4 AF_INET, caso ipv6 AF_INET6
+    remote_address.sin_family = AF_INET;
+    remote_address.sin_addr.s_addr = inet_addr("127.0.0.1");
+    remote_address.sin_port = htons(porta);
+
+    // conecta e testa conexão, caso erro, returna pra main
+    if (connect(server, (struct sockaddr *)&remote_address, sizeof(remote_address)) == SOCKET_ERROR)
+    {
+        printf("SERVIDOR INDISPONIVEL\n");
+        getch();
+        main();
+    };
+
+    printf("CONECTADO COM SERVIDOR\n");
+
+    FILE *ptrArq;
+    // Registro de cadastro
+    ptrArq = fopen("registroLS.txt", "r");
+
+    char ptrString[500];
+    char strLinha[500];
+
+    // Verifica se o arquivo existe ou foi aberto com sucesso.
+    if (ptrArq)
+    {
+        while (fgets(strLinha, 100, ptrArq) != 0)
+        {
+            strcat(ptrString, strLinha);
+        }
+    }
+    else
+        printf("\nFalha ao ler o arquivo de usuarios!\n");
+
+    // fechando o arquivo
+    fclose(ptrArq);
+    // envia a mensagem para o servidor
+    send(server, ptrString, strlen(ptrString), 0);
+    printf("BACKUP REALIZADO COM SUCESSO\n");
+    getch();
+    WSACleanup();
+    closesocket(server);
+    main();
+}
+
 int main()
 {
     system("cls");
@@ -538,14 +604,12 @@ int main()
         ic_logado = login();
     }
 
-    // verifica se eh fundador ou recepcionista
     if (funcionarios[id_funcionario].tp_funcionario == 0)
     {
         menuFundadores();
 
         printf("\nITEM: ");
         scanf(" %c", &resposta);
-
         switch (resposta)
         {
         case '1':
@@ -556,6 +620,9 @@ int main()
             break;
         case '3':
             buscar_funcionarios();
+            break;
+        case '4':
+            backupArquivosSOCKET();
             break;
         case 'z':
             ic_logado = 0;
