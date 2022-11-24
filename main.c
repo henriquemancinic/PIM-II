@@ -5,8 +5,14 @@
 #define TAM_CORPO_LOGIN 30
 #define TAM_CORPO_MENU 51
 #include <winsock.h>
+#include <conio.h> //getch
+#include <ctype.h> //islower
 
 #define BUFFER_SIZE 128
+#define COR_INTERNA_MENU 240
+#define COR_FUNDADOR 159
+#define COR_RECEPCIONISTA 96
+#define COR_DENTISTA 176
 
 int server = 0;
 
@@ -19,12 +25,14 @@ WSADATA wsa_data;
 // definindo o tamanho da login senha, maximo 20 caracteres
 #define qtdMax 21
 
-char polibio[6][6] = {{'a', 'b', 'c', 'd', 'e', 'f'},
-                      {'g', 'h', 'i', 'j', 'k', 'l'},
-                      {'m', 'n', 'o', 'p', 'q', 'r'},
-                      {'s', 't', 'u', 'v', 'w', 'x'},
-                      {'y', 'z', '0', '1', '2', '3'},
-                      {'4', '5', '6', '7', '8', '9'}};
+char polibio[6][6] = {
+    {'a', 'b', 'c', 'd', 'e', 'f'},
+    {'g', 'h', 'i', 'j', 'k', 'l'},
+    {'m', 'n', 'o', 'p', 'q', 'r'},
+    {'s', 't', 'u', 'v', 'w', 'x'},
+    {'y', 'z', '0', '1', '2', '3'},
+    {'4', '5', '6', '7', '8', '9'},
+};
 int linhaColuna[qtdMax * 2];
 
 void criptografa(char strMensagem[])
@@ -60,7 +68,8 @@ void criptografa(char strMensagem[])
         strMensagem[i] = linhaColuna[i] + '0';
     }
     // limpando o resto da variavel
-    for (i = indice; i < strlen(strMensagem); i++)
+    // usando (int) para não dar warning de unsigned (usando, mas nao corre o risco de ultrapassar)
+    for (i = indice; i < (int)strlen(strMensagem); i++)
     {
         strMensagem[i] = '\0';
     }
@@ -146,22 +155,9 @@ void descriptografa(char strMensagem[])
         strMensagem[i] = 0;
     }
 }
-/*
-Dicionario das funcoes:
-    funcoes vazias com parametros
-        menuSuperior(int <tamanho do corpo>, char <tipo de usuario>);
-        menuCorpo(int <tamanho do corpo>, char <conteudo do menu>);
-        menuInferior(int <tamanho do corpo>);
-*/
 
 int i, indice, indiceClientes, ic_logado, qtdLinhas, id_funcionario = 0;
 char resposta;
-
-/*typedef struct tp_data_contratacao
-{
-    int dia, mes, ano;
-} dt_contratacao;
-*/
 
 typedef struct cadastro_funcionario
 {
@@ -169,7 +165,6 @@ typedef struct cadastro_funcionario
     char nm_funcionario[50];
     char ds_login[50];
     char ds_senha[50];
-    // dt_contratacao dt_contratacao;
     int tp_funcionario;
 } Funcionarios;
 Funcionarios funcionarios[10];
@@ -178,6 +173,7 @@ typedef struct cadastro_cliente
 {
     int cd_id;
     char nm_cliente[50];
+    char celular[12];
     char ds_servico[500];  // aqui serao armazenados o que foi realizado no cliente.
     int cd_id_funcionario; // id do funcionario que fez o procedimento
 } Clientes;
@@ -217,7 +213,7 @@ void armazenaCliente()
     }
 
     // Gravando os dados no arquivo
-    fprintf(ptrArq, "%d|%s|%s|%d\n", indiceClientes, clientes[indiceClientes].nm_cliente, clientes[indiceClientes].ds_servico, clientes[indiceClientes].cd_id_funcionario);
+    fprintf(ptrArq, "%d|%s|%s|%s|%d\n", indiceClientes, clientes[indiceClientes].nm_cliente, clientes[indiceClientes].celular, clientes[indiceClientes].ds_servico, clientes[indiceClientes].cd_id_funcionario);
 
     // fechando o arquivo
     fclose(ptrArq);
@@ -256,8 +252,10 @@ void leArqClientes()
             ptrString = strtok(NULL, "|");
             strcpy(clientes[i].nm_cliente, ptrString);
             ptrString = strtok(NULL, "|");
+            strcpy(clientes[i].celular, ptrString);
+            ptrString = strtok(NULL, "|");
             strcpy(clientes[i].ds_servico, ptrString);
-            ptrString = strtok(NULL, "|\n");
+            ptrString = strtok(NULL, "|");
             clientes[i].cd_id_funcionario = atoi(ptrString);
         }
         indiceClientes = qtdLinhas;
@@ -318,8 +316,9 @@ void leArqLogin()
     fclose(ptrArq);
 }
 
-void menuSuperior(int tamCorpo, char strMenu[])
+void menuSuperior(int tamCorpo, char strMenu[], int borda)
 {
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), borda);
     int contaLetras = strlen(strMenu);
     tamCorpo = (tamCorpo - contaLetras) / 2;
 
@@ -337,76 +336,65 @@ void menuSuperior(int tamCorpo, char strMenu[])
     printf("%c\n", 187);
 }
 
-void menuCorpo(int tamCorpo, char strMenu[])
+void menuCorpo(int tamCorpo, char strMenu[], int borda, int interno)
 {
     int contaLetras = strlen(strMenu);
     tamCorpo = (tamCorpo - contaLetras);
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), borda);
     printf("%c", 186);
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), interno);
     printf("%s", strMenu);
     for (i = 0; i < tamCorpo; i++)
+    {
+        SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), interno);
         printf("%c", 32);
+    }
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), borda);
     printf("%c\n", 186);
 }
 
-void menuInferior(int tamCorpo)
+void menuInferior(int tamCorpo, int borda)
 {
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), borda);
     printf("%c", 200);
 
     for (i = 0; i < tamCorpo; i++)
         printf("%c", 205);
 
     printf("%c\n", 188);
-}
-
-void menuFundadores()
-{
-    system("cls");
-    menuSuperior(TAM_CORPO_MENU, "FUNDADORES");
-    menuCorpo(TAM_CORPO_MENU, "[ITEM] - Escolha um item do menu");
-    menuCorpo(TAM_CORPO_MENU, "[1] - Cadastrar novo funcionario");
-    menuCorpo(TAM_CORPO_MENU, "[2] - Listar todos os clientes");
-    menuCorpo(TAM_CORPO_MENU, "[3] - Listar todos os funcionarios");
-    menuCorpo(TAM_CORPO_MENU, "[4] - Realizar backup");
-    menuCorpo(TAM_CORPO_MENU, "[x] - Fechar sistema");
-    menuInferior(TAM_CORPO_MENU);
-}
-
-void menuRecepcionista()
-{
-    system("cls");
-    int largMenu = 60;
-    menuSuperior(largMenu, "RECEPCIONISTA");
-    menuCorpo(largMenu, "[ITEM] - Escolha um item do menu");
-    menuCorpo(largMenu, "[1] - Cadastrar novo cliente");
-    menuCorpo(largMenu, "[2] - Listar todos os clientes");
-    menuCorpo(largMenu, "[x] - Fechar sistema");
-    menuInferior(largMenu);
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 15);
 }
 
 int login()
 {
+    fflush(stdin);
     char login[15];
     char senha[15];
 
     // Criando menu do login
-    menuSuperior(TAM_CORPO_LOGIN, "LOGIN");
-    menuCorpo(TAM_CORPO_LOGIN, "Login: ");
+    menuSuperior(TAM_CORPO_LOGIN, "LOGIN", 0);
+    system("color 0F");
+    menuCorpo(TAM_CORPO_LOGIN, "Login: ", 0, 0);
+    system("color 0F");
     // Adiciona ║ antes e depois de pedir login
     printf("%c", 186);
-    scanf("%s", &login);
+    scanf("%s", login);
     printf("%c", 186);
 
     // preenche um linha somente de espaco
+
     for (i = 0; i < TAM_CORPO_LOGIN; i++)
         printf("%c", 32);
+
     // Adiciona ║ depois para fechar a linha
     printf("%c\n", 186);
 
-    menuCorpo(TAM_CORPO_LOGIN, "Senha: ");
+    menuCorpo(TAM_CORPO_LOGIN, "Senha: ", 0, 0);
+    system("color 0F");
+
     // Adiciona ║ antes e depois de pedir senha
     printf("%c", 186);
-    scanf("%s", &senha);
-
+    scanf("%s", senha);
     printf("%c", 186);
     // preenche um linha somente de espaco
     for (i = 0; i < TAM_CORPO_LOGIN; i++)
@@ -414,7 +402,8 @@ int login()
     // Adiciona ║ depois para fechar a linha
     printf("%c\n", 186);
 
-    menuInferior(TAM_CORPO_LOGIN);
+    menuInferior(TAM_CORPO_LOGIN, 0);
+    system("color 0F");
 
     // percorre o arquivo e atribui os conteudos em struct
     leArqLogin();
@@ -432,13 +421,14 @@ int login()
 
     if (ic_logado != 1)
     {
+        menuSuperior(TAM_CORPO_LOGIN, "DADOS ERRADOS", 0);
         system("color 4");
-        menuSuperior(TAM_CORPO_LOGIN, "DADOS ERRADOS");
-        menuInferior(TAM_CORPO_LOGIN);
+        menuInferior(TAM_CORPO_LOGIN, 0);
+        system("color 4");
         system("pause");
         system("cls");
-        system("color 7");
     }
+    return 0;
 }
 
 int verificaLogin(char login[])
@@ -459,7 +449,7 @@ void buscar_funcionarios()
     // verificar essa l�gica // começar em 1 para eliminar de mostrar os usuarios fundadores
     for (i = 1; i < indice; i++)
     {
-        if (funcionarios[i].tp_funcionario == 1)
+        if (funcionarios[i].tp_funcionario != 0)
         {
             printf("\n::----------------------------------------------::");
             printf("\n::NOME: %s", funcionarios[i].nm_funcionario);
@@ -470,77 +460,201 @@ void buscar_funcionarios()
         }
     }
     system("pause");
-    main();
 }
 
 void buscar_clientes()
 {
+    leArqClientes();
     // verificar essa l�gica // começar em 1 para eliminar de mostrar os usuarios fundadores
     for (i = 0; i < indiceClientes; i++)
     {
-        printf("\n::----------------------------------------------::");
-        printf("\n:: %d", clientes[i].cd_id);
-        printf("\n:: %s", clientes[i].nm_cliente);
-        printf("\n:: %s", clientes[i].ds_servico);
-        printf("\n:: %d", clientes[i].cd_id_funcionario);
-        printf("\n::----------------------------------------------::\n");
+        printf("\n::-------------------------------------------------------------------::");
+        printf("\n::Codigo: [%d] - Nome: %s - Celular: %s ", clientes[i].cd_id, clientes[i].nm_cliente, clientes[i].celular);
+
+        if (strcmp(clientes[i].ds_servico, " "))
+        {
+            printf("\n::Procedimento: %s", clientes[i].ds_servico);
+            printf("\n::Codigo do Dentista %d", clientes[i].cd_id_funcionario);
+        }
+        else
+            printf("\n::Procedimento: aguardando");
+
+        printf("\n::-------------------------------------------------------------------::\n");
     }
     system("pause");
-    main();
 }
 
 void cadastrar_funcionarios()
 {
+    int aux = 0;
+    int achou = 0;
     system("cls");
-    menuSuperior(TAM_CORPO_MENU + 10, "REGRAS DE CADASTRO");
-    menuCorpo(TAM_CORPO_MENU + 10, "-NOME --> NAO PODE SER MAIOR QUE 50 CARACTERES");
-    menuCorpo(TAM_CORPO_MENU + 10, "-LOGIN E SENHA --> NAO PODEM SER MAIORES QUE 20 CARACTERES");
-    menuCorpo(TAM_CORPO_MENU + 10, "-SENHA --> SOMENTE LETRAS MINUSCULAS E NUMEROS");
-    menuInferior(TAM_CORPO_MENU + 10);
+    menuSuperior(TAM_CORPO_MENU + 10, "REGRAS DE CADASTRO", COR_FUNDADOR);
+    menuCorpo(TAM_CORPO_MENU + 10, "-NOME --> NAO PODE SER MAIOR QUE 50 CARACTERES", COR_FUNDADOR, COR_INTERNA_MENU);
+    menuCorpo(TAM_CORPO_MENU + 10, "-LOGIN E SENHA --> NAO PODEM SER MAIORES QUE 20 CARACTERES", COR_FUNDADOR, COR_INTERNA_MENU);
+    menuCorpo(TAM_CORPO_MENU + 10, "-SENHA --> SOMENTE LETRAS MINUSCULAS E NUMEROS", COR_FUNDADOR, COR_INTERNA_MENU);
+    menuInferior(TAM_CORPO_MENU + 10, COR_FUNDADOR);
 
-    printf("\n");
-
-    printf("-----------------CADASTRAR");
     printf("\nNome do Funcionario: ");
     // limpando o buffer
     fflush(stdin);
     gets(funcionarios[indice].nm_funcionario);
+    aux = strlen(funcionarios[indice].nm_funcionario);
+    do
+    {
+        for (i = 0; i < aux; i++)
+        {
+            // verifica se o caractere pertence ao alfabeto e se é um " "(espaco) e depois verifica se é digito.
+            if (isdigit(funcionarios[indice].nm_funcionario[i]) || (!isalpha(funcionarios[indice].nm_funcionario[i]) && !isspace(funcionarios[indice].nm_funcionario[i])))
+            {
+                achou = 1;
+                break;
+            }
+            achou = 0;
+        }
+        if (achou == 1 || aux >= 50)
+        {
+            printf("Atencao as regras, digite o nome novamente: ");
+            gets(funcionarios[indice].nm_funcionario);
+            aux = strlen(funcionarios[indice].nm_funcionario);
+        }
+    } while (achou);
+
     printf("Login: ");
     scanf("%s", funcionarios[indice].ds_login);
     // chamando a função e verificando o login
-    while (verificaLogin(funcionarios[indice].ds_login) == 1)
+    while (verificaLogin(funcionarios[indice].ds_login) == 1 || strlen(funcionarios[indice].ds_login) >= 20)
     {
-        printf("Login existente, digite um novo: ");
+        if (strlen(funcionarios[indice].ds_login) >= 20)
+        {
+            printf("Atencao as regras, digite o login novamente: ");
+        }
+        else
+            printf("Login existente, digite um novo: ");
+
         scanf("%s", funcionarios[indice].ds_login);
     };
+
     printf("Senha: ");
     scanf("%s", funcionarios[indice].ds_senha);
+    aux = strlen(funcionarios[indice].ds_senha);
+    do
+    {
+        for (i = 0; i < aux; i++)
+        {
+            // verifica se a letra e maiusculas ou se não faz parte do alfabeto e se nao é hexadecimal (a-z,A-Z,0-9) e solicita para digitar novamente
+            // cliente entrou com o char '1', ele não pertence ao alfabeto e nem ao hexadecinal (false) e tbm não é maiúsculo (false).
+            if (isupper(funcionarios[indice].ds_senha[i]) || (!isalpha(funcionarios[indice].ds_senha[i]) && !isxdigit(funcionarios[indice].ds_senha[i])))
+            {
+                achou = 1;
+                break;
+            }
+            achou = 0;
+        }
+        if (achou == 1 || aux >= 20)
+        {
+            printf("Atencao as regras, digite a senha novamente: ");
+            scanf("%s", funcionarios[indice].ds_senha);
+            aux = strlen(funcionarios[indice].ds_senha);
+        }
+    } while (achou);
+
     criptografa(funcionarios[indice].ds_senha);
-    funcionarios[indice].tp_funcionario = 1;
+
+    do
+    {
+        printf("\n-[ITEM]--------APERTE UMA TECLA-------------");
+        printf("\n  [1] - Para cadastrar como RECEPCIONISTA");
+        printf("\n  [2] - Para cadastrar como DENTISTA");
+        printf("\n--------------------------------------------");
+        printf("\nITEM: ");
+        scanf(" %c", &resposta);
+        switch (resposta)
+        {
+        case '1':
+            funcionarios[indice].tp_funcionario = 1;
+            break;
+        case '2':
+            funcionarios[indice].tp_funcionario = 2;
+            break;
+        default:
+            printf("\n---------------OPCAO INVALIDA---------------\n");
+            resposta = 3;
+        }
+    } while (resposta == 3);
+
     armazenaFuncionario();
     indice++;
     system("pause");
-    main();
 }
 
 void cadastrar_clientes()
 {
+    int aux = 0;
+    int achou = 0;
     system("cls");
-    printf("Nome do paciente: \n");
-    // limpando o buffer
+    menuSuperior(TAM_CORPO_MENU + 10, "REGRAS DE CADASTRO", COR_RECEPCIONISTA);
+    menuCorpo(TAM_CORPO_MENU + 10, "-NOME --> NAO PODE SER MAIOR QUE 50 CARACTERES", COR_RECEPCIONISTA, COR_INTERNA_MENU);
+    menuCorpo(TAM_CORPO_MENU + 10, "-TELEFONE --> NAO PODEM SER MAIOR QUE 12 DIGITOS", COR_RECEPCIONISTA, COR_INTERNA_MENU);
+    menuCorpo(TAM_CORPO_MENU + 10, "-TELEFONE --> SOMENTE NUMEROS", COR_RECEPCIONISTA, COR_INTERNA_MENU);
+    menuInferior(TAM_CORPO_MENU + 10, COR_RECEPCIONISTA);
+
+    printf("\nNome do paciente: \n");
+
     fflush(stdin);
     gets(clientes[indiceClientes].nm_cliente);
-    printf("Descreva o servico realizado: \n");
-    gets(clientes[indiceClientes].ds_servico);
+    aux = strlen(clientes[indiceClientes].nm_cliente);
+    do
+    {
+        for (i = 0; i < aux; i++)
+        {
+            if (isdigit(clientes[indiceClientes].nm_cliente[i]) || (!isalpha(clientes[indiceClientes].nm_cliente[i]) && !isspace(clientes[indiceClientes].nm_cliente[i])))
+            {
+                achou = 1;
+                break;
+            }
+            achou = 0;
+        }
+        if (achou == 1 || aux >= 50)
+        {
+            printf("Atencao as regras, digite o nome novamente: ");
+            gets(clientes[indiceClientes].nm_cliente);
+            aux = strlen(clientes[indiceClientes].nm_cliente);
+        }
+    } while (achou);
+
+    printf("Numero de celular: \n");
+    scanf("%s", clientes[indiceClientes].celular);
+    aux = strlen(clientes[indiceClientes].celular);
+    do
+    {
+        for (i = 0; i < aux; i++)
+        {
+            // verifica se a letra e maiusculas ou se não faz parte do alfabeto e se nao é hexadecimal (a-z,A-Z,0-9) e solicita para digitar novamente
+            // cliente entrou com o char '1', ele não pertence ao alfabeto e nem ao hexadecinal (false) e tbm não é maiúsculo (false).
+            if (!isdigit(clientes[indiceClientes].celular[i]))
+            {
+                achou = 1;
+                break;
+            }
+            achou = 0;
+        }
+        if (achou == 1 || aux >= 12)
+        {
+            printf("Atencao as regras, digite o celular novamente: ");
+            scanf("%s", clientes[indiceClientes].celular);
+            aux = strlen(clientes[indiceClientes].celular);
+        }
+    } while (achou);
+    strcpy(clientes[indiceClientes].ds_servico, " ");
     clientes[indiceClientes].cd_id_funcionario = id_funcionario;
     armazenaCliente();
     indiceClientes++;
     system("pause");
-    main();
 }
 
 // função para abrir um cliente e enviar os arquivos para o servidor salvar.
-void backupArquivosSOCKET()
+int backupArquivosSOCKET()
 {
     WSAStartup(MAKEWORD(2, 0), &wsa_data);
     //(comunicação ipv4, protocolo TCP,0)
@@ -556,11 +670,7 @@ void backupArquivosSOCKET()
 
     // conecta e testa conexão, caso erro, returna pra main
     if (connect(server, (struct sockaddr *)&remote_address, sizeof(remote_address)) == SOCKET_ERROR)
-    {
-        printf("SERVIDOR INDISPONIVEL\n");
-        getch();
-        main();
-    };
+        return 0;
 
     printf("CONECTADO COM SERVIDOR\n");
 
@@ -580,17 +690,231 @@ void backupArquivosSOCKET()
         }
     }
     else
-        printf("\nFalha ao ler o arquivo de usuarios!\n");
+        printf("\nFalha ao ler ou criar o arquivo de backup!\n");
+
+    send(server, ptrString, strlen(ptrString), 0);
+    printf("BACKUP DOS FUNCIONARIOS REALIZADO COM SUCESSO\n");
+    fclose(ptrArq);
+
+    //limpando array para não ir residuos de funcionarios
+    memset(ptrString, 0, sizeof (ptrString));
+    ptrArq = fopen("registroClientes.txt", "r");
+
+    if (ptrArq)
+    {
+        while (fgets(strLinha, 100, ptrArq) != 0)
+        {
+            strcat(ptrString, strLinha);
+        }
+    }
+    else
+        printf("\nFalha ao ler ou criar o arquivo de backup!\n");
+
+    send(server, ptrString, strlen(ptrString), 0);
+    printf("BACKUP DOS CLIENTES REALIZADO COM SUCESSO\n");
 
     // fechando o arquivo
     fclose(ptrArq);
-    // envia a mensagem para o servidor
-    send(server, ptrString, strlen(ptrString), 0);
-    printf("BACKUP REALIZADO COM SUCESSO\n");
-    getch();
+    system("pause");
     WSACleanup();
     closesocket(server);
+    return 1;
+}
+
+void menuFundadores()
+{
+    system("cls");
+    menuSuperior(TAM_CORPO_MENU, "FUNDADORES", COR_FUNDADOR);
+    menuCorpo(TAM_CORPO_MENU, "[ITEM] - Escolha um item do menu", COR_FUNDADOR, COR_INTERNA_MENU);
+    menuCorpo(TAM_CORPO_MENU, "[1] - Cadastrar novo funcionario", COR_FUNDADOR, COR_INTERNA_MENU);
+    menuCorpo(TAM_CORPO_MENU, "[2] - Listar todos os clientes", COR_FUNDADOR, COR_INTERNA_MENU);
+    menuCorpo(TAM_CORPO_MENU, "[3] - Listar todos os funcionarios", COR_FUNDADOR, COR_INTERNA_MENU);
+    menuCorpo(TAM_CORPO_MENU, "[4] - Realizar backup", COR_FUNDADOR, COR_INTERNA_MENU);
+    menuCorpo(TAM_CORPO_MENU, "[x] - Qualquer outra tecla desloga do sistema", COR_FUNDADOR, COR_INTERNA_MENU);
+    menuInferior(TAM_CORPO_MENU, COR_FUNDADOR);
+
+    printf("\nITEM: ");
+    scanf(" %c", &resposta);
+    switch (resposta)
+    {
+    case '1':
+        cadastrar_funcionarios();
+        break;
+    case '2':
+        buscar_clientes();
+        break;
+    case '3':
+        buscar_funcionarios();
+        break;
+    case '4':
+        if (backupArquivosSOCKET() == 0)
+        {
+            printf("SERVIDOR INDISPONIVEL");
+            getch();
+        }
+        break;
+    default:
+        ic_logado = 0;
+        system("cls");
+        main();
+    }
+}
+
+void menuRecepcionista()
+{
+    system("cls");
+    menuSuperior(TAM_CORPO_MENU, "RECEPCIONISTA", COR_RECEPCIONISTA);
+    menuCorpo(TAM_CORPO_MENU + 1, "[ITEM] - Escolha um item do menu", COR_RECEPCIONISTA, COR_INTERNA_MENU);
+    menuCorpo(TAM_CORPO_MENU + 1, "[1] - Cadastrar novo cliente", COR_RECEPCIONISTA, COR_INTERNA_MENU);
+    menuCorpo(TAM_CORPO_MENU + 1, "[2] - Listar todos os clientes", COR_RECEPCIONISTA, COR_INTERNA_MENU);
+    menuCorpo(TAM_CORPO_MENU + 1, "[x] - Qualquer outra tecla desloga do sistema", COR_RECEPCIONISTA, COR_INTERNA_MENU);
+    menuInferior(TAM_CORPO_MENU + 1, COR_RECEPCIONISTA);
+
+    printf("\nITEM: ");
+    scanf(" %c", &resposta);
+
+    switch (resposta)
+    {
+    case '1':
+        cadastrar_clientes();
+        break;
+    case '2':
+        buscar_clientes();
+        break;
+    default:
+        ic_logado = 0;
+        system("cls");
+        main();
+        break;
+    }
+}
+
+void anexanoarquivo(int linha)
+{
+    FILE *ptrArq;
+    // Registro de cadastro
+    ptrArq = fopen("registroClientes.txt", "w");
+    // Verifica se o arquivo existe ou foi aberto com sucesso.
+    if (ptrArq)
+    {
+        for (i = 0; i < linha; i++)
+        {
+            // retira -1 por conta do \n do final da string
+
+            fprintf(ptrArq, "%d|%s|%s|%s|%d\n", i, clientes[i].nm_cliente, clientes[i].celular, clientes[i].ds_servico, clientes[i].cd_id_funcionario);
+        }
+    }
+    else
+        printf("\nFalha ao ler arquivo!\n");
+    // fechando o arquivo
+    fclose(ptrArq);
+}
+
+void listaClientesDentista(int clientes_emEspera)
+{
+    int count = 0;
+
+    for (i = 0; i < indiceClientes; i++)
+    {
+        if (strcmp(clientes[i].ds_servico, " ") != clientes_emEspera)
+        {
+            if (clientes_emEspera)
+            {
+                printf("\n::-------------------------------------------------------------------::");
+                printf("\n::Codigo: [%d] - Nome: %s - Celular: %s ", clientes[i].cd_id, clientes[i].nm_cliente, clientes[i].celular);
+                count++;
+            }
+            else
+            {
+                if (clientes[i].cd_id_funcionario == id_funcionario)
+                {
+                    printf("\n::-------------------------------------------------------------------::");
+                    printf("\n::Codigo: [%d] - Nome: %s", clientes[i].cd_id, clientes[i].nm_cliente);
+                    printf("\n::Celular: %s", clientes[i].celular);
+                    printf("\n::Procedimento realizado: %s", clientes[i].ds_servico);
+                    count++;
+                }
+            }
+        }
+    }
+
+    if (count)
+    {
+        printf("\n::-------------------------------------------------------------------::\n\n");
+    }
+    else
+        printf("\n::---------------------NAO TEM CLIENTES NA ESPERA--------------------::\n\n");
+
+    system("pause");
+}
+
+void anexaProcedimento()
+{
+    int id;
+    int count = 0;
+    for (i = 0; i < indiceClientes; i++)
+    {
+        if (!strcmp(clientes[i].ds_servico, " "))
+        {
+            printf("\n::-------------------------------------------------------------------::");
+            printf("\n::Codigo: [%d] - Nome: %s - Celular: %s ", clientes[i].cd_id, clientes[i].nm_cliente, clientes[i].celular);
+            count++;
+        }
+    }
+    if (count)
+    {
+        printf("\n::-------------------------------------------------------------------::\n");
+        printf("\nDigite o codigo do cliente para anexar um procedimento realizado: \n");
+        scanf(" %d", &id);
+        while (isdigit(id) || (id < 0 || id > count))
+        {
+            fflush(stdin);
+            printf("\nDigite um codigo existente: \n");
+            scanf(" %d", &id);
+        }
+        fflush(stdin);
+        printf("\nDigite o procedimento realizado:\n");
+        gets(clientes[id].ds_servico);
+        clientes[id].cd_id_funcionario = id_funcionario;
+        anexanoarquivo(indiceClientes);
+    }
+    else
+        printf("\n::---------------------NAO TEM CLIENTES NA ESPERA--------------------::\n\n");
+    system("pause");
     main();
+}
+
+void menuDentista()
+{
+    system("cls");
+    menuSuperior(TAM_CORPO_MENU, "DENTISTA", COR_DENTISTA);
+    menuCorpo(TAM_CORPO_MENU, "[ITEM] - Escolha um item do menu", COR_DENTISTA, COR_INTERNA_MENU);
+    menuCorpo(TAM_CORPO_MENU, "[1] - Anexar procedimento realizado no cliente", COR_DENTISTA, COR_INTERNA_MENU);
+    menuCorpo(TAM_CORPO_MENU, "[2] - Listar clientes em espera", COR_DENTISTA, COR_INTERNA_MENU);
+    menuCorpo(TAM_CORPO_MENU, "[3] - Listar seus clientes", COR_DENTISTA, COR_INTERNA_MENU);
+    menuCorpo(TAM_CORPO_MENU, "[x] - Qualquer outra tecla desloga do sistema", COR_DENTISTA, COR_INTERNA_MENU);
+    menuInferior(TAM_CORPO_MENU, COR_DENTISTA);
+
+    printf("\nITEM: ");
+    scanf(" %c", &resposta);
+
+    switch (resposta)
+    {
+    case '1':
+        anexaProcedimento();
+        break;
+    case '2':
+        listaClientesDentista(1);
+        break;
+    case '3':
+        listaClientesDentista(0);
+        break;
+    default:
+        ic_logado = 0;
+        system("cls");
+        main();
+        break;
+    }
 }
 
 int main()
@@ -604,54 +928,26 @@ int main()
         ic_logado = login();
     }
 
-    if (funcionarios[id_funcionario].tp_funcionario == 0)
+    do
     {
-        menuFundadores();
-
-        printf("\nITEM: ");
-        scanf(" %c", &resposta);
-        switch (resposta)
+        switch (funcionarios[id_funcionario].tp_funcionario)
         {
-        case '1':
-            cadastrar_funcionarios();
+        case 0:
+            menuFundadores();
             break;
-        case '2':
-            buscar_clientes();
+        case 1:
+            menuRecepcionista();
             break;
-        case '3':
-            buscar_funcionarios();
+        case 2:
+            menuDentista();
             break;
-        case '4':
-            backupArquivosSOCKET();
-            break;
-        case 'z':
+        default:
+            printf("\n HOUVE UM ERRO INESPERADO, CASO OCORRA NOVAMENTE CONTATAR A EQUIPE DE SOFTWARE!");
+            system("pause");
             ic_logado = 0;
-            system("cls");
-            main();
-        }
-    }
-    else if (funcionarios[id_funcionario].tp_funcionario == 1)
-    {
-        menuRecepcionista();
-
-        printf("\nITEM: ");
-        scanf(" %c", &resposta);
-
-        switch (resposta)
-        {
-        case '1':
-            cadastrar_clientes();
-            break;
-        case '2':
-            buscar_clientes();
-            break;
-        case 'z':
-            ic_logado = 0;
-            system("cls");
             main();
             break;
         }
-    }
-
+    } while (ic_logado == 1);
     return 0;
 }
