@@ -28,7 +28,7 @@ int main()
 
     printf("ESPERANDO CONEXAO COM O CLIENTE...\n");
     int csize = sizeof caddr;
-    int cliente, logout;
+    int cliente;
     char buff[200];
 
     while (1)
@@ -39,14 +39,29 @@ int main()
         // limpando o buffer
         memset(buff, 0, sizeof buff);
         // depois disso jogamos os dados em uma variavel (0 eh para gravar em bufffer)
-        logout = recv(cliente, buff, sizeof buff, 0);
+        recv(cliente, buff, sizeof buff, 0);
 
-        printf("\nBackup: \n%s", buff);
-        printf("\ncliente: \n%d", logout);
+        printf("\nBackup: \n%s\n", buff);
 
-        //salvando arquivo/sobreescreve
+        // salvando arquivo/sobreescreve
         FILE *ptrArq;
         ptrArq = fopen("backupRegistroLS.txt", "w");
+        if (ptrArq == NULL)
+        {
+            printf("Erro ao tentar criar ou abrir arquivo!");
+            exit(1);
+        }
+        fprintf(ptrArq, "%s\n", buff);
+        fclose(ptrArq);
+
+        // limpando o buffer
+        memset(buff, 0, sizeof (buff));
+
+        // depois disso jogamos os dados em uma variavel (0 eh para gravar em bufffer)
+        recv(cliente, buff, sizeof buff, 0);
+        printf("\nBackup: \n%s\n", buff);
+
+        ptrArq = fopen("backupClientes.txt", "w");
         if (ptrArq == NULL)
         {
             printf("Erro ao tentar criar ou abrir arquivo!");
