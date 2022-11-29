@@ -2,28 +2,22 @@
 #include <stdlib.h>
 #include <time.h>
 #include <string.h>
-#define TAM_CORPO_LOGIN 30
+#include <winsock.h> //sockets
+#include <conio.h>   //getch
+#include <ctype.h>   //islower
+#define TAM_CORPO_LOGIN 31
 #define TAM_CORPO_MENU 51
-#include <winsock.h>
-#include <conio.h> //getch
-#include <ctype.h> //islower
-
-#define BUFFER_SIZE 128
 #define COR_INTERNA_MENU 240
 #define COR_FUNDADOR 159
 #define COR_RECEPCIONISTA 96
 #define COR_DENTISTA 176
+#define qtdMaxLS 21 // definindo o tamanho da login senha, maximo 20 caracteres
 
-int server = 0;
-
-char message[BUFFER_SIZE];
-
+// struct servidor/dll
 struct sockaddr_in remote_address;
-
 WSADATA wsa_data;
 
-// definindo o tamanho da login senha, maximo 20 caracteres
-#define qtdMax 21
+FILE *ptrArq;
 
 char polibio[6][6] = {
     {'a', 'b', 'c', 'd', 'e', 'f'},
@@ -33,7 +27,7 @@ char polibio[6][6] = {
     {'y', 'z', '0', '1', '2', '3'},
     {'4', '5', '6', '7', '8', '9'},
 };
-int linhaColuna[qtdMax * 2];
+int linhaColuna[qtdMaxLS * 2];
 
 void criptografa(char strMensagem[])
 {
@@ -156,15 +150,16 @@ void descriptografa(char strMensagem[])
     }
 }
 
-int i, indice, indiceClientes, ic_logado, qtdLinhas, id_funcionario = 0;
+int i, indice, indiceClientes, ic_logado, qtdLinhas, id_funcionario, server = 0;
 char resposta;
 
 typedef struct cadastro_funcionario
 {
     int cd_id;
     char nm_funcionario[50];
-    char ds_login[50];
-    char ds_senha[50];
+    char ds_login[qtdMaxLS];
+    // 2x por conta da cifra de polibio, que cada caratere equivale a 2.
+    char ds_senha[qtdMaxLS * 2];
     int tp_funcionario;
 } Funcionarios;
 Funcionarios funcionarios[10];
@@ -177,141 +172,128 @@ typedef struct cadastro_cliente
     char ds_servico[500];  // aqui serao armazenados o que foi realizado no cliente.
     int cd_id_funcionario; // id do funcionario que fez o procedimento
 } Clientes;
-Clientes clientes[10];
+Clientes clientes[50];
 
-void armazenaFuncionario()
+FILE *ptrAbreArquivo(char modo, char localArq[30])
 {
-    FILE *ptrArq;
-    // Registro Login e Senha
-    ptrArq = fopen("registroLS.txt", "a");
+    // deixando arquivo
+    SetFileAttributes(localArq, FILE_ATTRIBUTE_HIDDEN);
+    switch (modo)
+    {
+    case 'a':
+        ptrArq = fopen(localArq, "a");
+        break;
+    case 'b':
+        ptrArq = fopen(localArq, "a+");
+        break;
+    case 'w':
+        ptrArq = fopen(localArq, "w");
+        break;
+    }
 
-    // Testando a abertura do arquivo
+    // Testando o arquivo
     if (ptrArq == NULL)
     {
         printf("Erro ao tentar criar ou abrir arquivo!");
         exit(1);
     }
 
+    return ptrArq;
+}
+
+void armazenaFuncionario()
+{
+    ptrArq = ptrAbreArquivo('a', "registroLS.txt");
     // Gravando os dados no arquivo
     fprintf(ptrArq, "\n%d|%s|%s|%s|%d|", indice, funcionarios[indice].nm_funcionario, funcionarios[indice].ds_login, funcionarios[indice].ds_senha, funcionarios[indice].tp_funcionario);
-
     // fechando o arquivo
     fclose(ptrArq);
 }
 
 void armazenaCliente()
 {
-    FILE *ptrArq;
-    // Registro Login e Senha
-    ptrArq = fopen("registroClientes.txt", "a");
-
-    // Testando a abertura do arquivo
-    if (ptrArq == NULL)
-    {
-        printf("Erro ao tentar criar ou abrir arquivo!");
-        exit(1);
-    }
-
-    // Gravando os dados no arquivo
+    ptrArq = ptrAbreArquivo('a', "registroClientes.txt");
     fprintf(ptrArq, "%d|%s|%s|%s|%d\n", indiceClientes, clientes[indiceClientes].nm_cliente, clientes[indiceClientes].celular, clientes[indiceClientes].ds_servico, clientes[indiceClientes].cd_id_funcionario);
-
-    // fechando o arquivo
     fclose(ptrArq);
 }
 
 void leArqClientes()
 {
-    FILE *ptrArq;
-    // Registro de cadastro
-    ptrArq = fopen("registroClientes.txt", "a+");
-
+    // modo a+ colocamos como b
+    ptrArq = ptrAbreArquivo('b', "registroClientes.txt");
     char *ptrString;
     char strLinha[500];
     char c;
 
     qtdLinhas = 0;
-    // Verifica se o arquivo existe ou foi aberto com sucesso.
-    if (ptrArq)
-    {
-        // OBS- criar um outro arquivo de clientes
-        // contando quantas linhas do arquivo.
-        for (c = fgetc(ptrArq); c != EOF; c = fgetc(ptrArq))
-            if (c == '\n')
-                qtdLinhas++;
-        // retorna para o inicio do arquivo.
-        rewind(ptrArq);
-        /*Aqui abaixo vamos separar a nossa linha do arquivo por token -> strtok(), ent�o acada separador nosso |(pipe) significa que � um token e assim por diante, ele entra
-        no primeiro token com a linha(string) e depois que ele passa no primeiro looping ele procura o null e parte para outro token e assim vai ate acabar a linha
-        primeiro token ID, segundo NOME, terceito LOGIN, quarto SENHA e por �ltimo tipoFUNCIONARIO, sendo 0 FUNDADOR e 1 FUNCIONARIO.
-        */
-        for (i = 0; i < qtdLinhas; i++)
-        {
-            ptrString = strtok(fgets(strLinha, 100, ptrArq), "|");
-            // como o arquivo eh texto, temos que converter a string em int usando a funcao atoi().
-            clientes[i].cd_id = atoi(ptrString);
-            ptrString = strtok(NULL, "|");
-            strcpy(clientes[i].nm_cliente, ptrString);
-            ptrString = strtok(NULL, "|");
-            strcpy(clientes[i].celular, ptrString);
-            ptrString = strtok(NULL, "|");
-            strcpy(clientes[i].ds_servico, ptrString);
-            ptrString = strtok(NULL, "|");
-            clientes[i].cd_id_funcionario = atoi(ptrString);
-        }
-        indiceClientes = qtdLinhas;
-    }
 
-    else
-        printf("\nFalha ao ler arquivo!\n");
-    // fechando o arquivo
+    // OBS- criar um outro arquivo de clientes
+    // contando quantas linhas do arquivo.
+    for (c = fgetc(ptrArq); c != EOF; c = fgetc(ptrArq))
+        if (c == '\n')
+            qtdLinhas++;
+    // retorna para o inicio do arquivo.
+    rewind(ptrArq);
+    /*Aqui abaixo vamos separar a nossa linha do arquivo por token -> strtok(), ent�o acada separador nosso |(pipe) significa que � um token e assim por diante, ele entra
+    no primeiro token com a linha(string) e depois que ele passa no primeiro looping ele procura o null e parte para outro token e assim vai ate acabar a linha
+    primeiro token ID, segundo NOME, terceito LOGIN, quarto SENHA e por �ltimo tipoFUNCIONARIO, sendo 0 FUNDADOR e 1 FUNCIONARIO.
+    */
+    for (i = 0; i < qtdLinhas; i++)
+    {
+        ptrString = strtok(fgets(strLinha, 100, ptrArq), "|");
+        // como o arquivo eh texto, temos que converter a string em int usando a funcao atoi().
+        clientes[i].cd_id = atoi(ptrString);
+        ptrString = strtok(NULL, "|");
+        strcpy(clientes[i].nm_cliente, ptrString);
+        ptrString = strtok(NULL, "|");
+        strcpy(clientes[i].celular, ptrString);
+        ptrString = strtok(NULL, "|");
+        strcpy(clientes[i].ds_servico, ptrString);
+        ptrString = strtok(NULL, "|");
+        clientes[i].cd_id_funcionario = atoi(ptrString);
+    }
+    indiceClientes = qtdLinhas;
+
     fclose(ptrArq);
 }
 
 void leArqLogin()
 {
-    FILE *ptrArq;
-    // Registro de cadastro
-    ptrArq = fopen("registroLS.txt", "r");
-
+    ptrArq = ptrAbreArquivo('b', "registroLS.txt");
     char *ptrString;
     char strLinha[500];
     char c;
 
     qtdLinhas = 0;
-    // Verifica se o arquivo existe ou foi aberto com sucesso.
-    if (ptrArq)
-    {
-        // OBS- criar um outro arquivo de clientes
-        // contando quantas linhas do arquivo.
-        for (c = fgetc(ptrArq); c != EOF; c = fgetc(ptrArq))
-            if (c == '\n')
-                qtdLinhas++;
-        // retorna para o inicio do arquivo.
-        rewind(ptrArq);
-        /*Aqui abaixo vamos separar a nossa linha do arquivo por token -> strtok(), ent�o acada separador nosso |(pipe) significa que � um token e assim por diante, ele entra
-        no primeiro token com a linha(string) e depois que ele passa no primeiro looping ele procura o null e parte para outro token e assim vai ate acabar a linha
-        primeiro token ID, segundo NOME, terceito LOGIN, quarto SENHA e por �ltimo tipoFUNCIONARIO, sendo 0 FUNDADOR e 1 FUNCIONARIO.
-        */
-        for (i = 0; i <= qtdLinhas; i++)
-        {
-            ptrString = strtok(fgets(strLinha, 100, ptrArq), "|");
-            // como o arquivo eh texto, temos que converter a string em int usando a funcao atoi().
-            funcionarios[i].cd_id = atoi(ptrString);
-            ptrString = strtok(NULL, "|");
-            strcpy(funcionarios[i].nm_funcionario, ptrString);
-            ptrString = strtok(NULL, "|");
-            strcpy(funcionarios[i].ds_login, ptrString);
-            ptrString = strtok(NULL, "|");
-            strcpy(funcionarios[i].ds_senha, ptrString);
-            ptrString = strtok(NULL, "|");
-            funcionarios[i].tp_funcionario = atoi(ptrString);
-            ptrString = strtok(NULL, "|");
-        }
-        indice = qtdLinhas + 1;
-    }
 
-    else
-        printf("\nFalha ao ler o arquivo!\n");
+    // OBS- criar um outro arquivo de clientes
+    // contando quantas linhas do arquivo.
+    for (c = fgetc(ptrArq); c != EOF; c = fgetc(ptrArq))
+        if (c == '\n')
+            qtdLinhas++;
+    // retorna para o inicio do arquivo.
+    rewind(ptrArq);
+    /*Aqui abaixo vamos separar a nossa linha do arquivo por token -> strtok(), ent�o acada separador nosso |(pipe) significa que � um token e assim por diante, ele entra
+    no primeiro token com a linha(string) e depois que ele passa no primeiro looping ele procura o null e parte para outro token e assim vai ate acabar a linha
+    primeiro token ID, segundo NOME, terceito LOGIN, quarto SENHA e por �ltimo tipoFUNCIONARIO, sendo 0 FUNDADOR e 1 FUNCIONARIO.
+    */
+    for (i = 0; i <= qtdLinhas; i++)
+    {
+        ptrString = strtok(fgets(strLinha, 100, ptrArq), "|");
+        // como o arquivo eh texto, temos que converter a string em int usando a funcao atoi().
+        funcionarios[i].cd_id = atoi(ptrString);
+        ptrString = strtok(NULL, "|");
+        strcpy(funcionarios[i].nm_funcionario, ptrString);
+        ptrString = strtok(NULL, "|");
+        strcpy(funcionarios[i].ds_login, ptrString);
+        ptrString = strtok(NULL, "|");
+        strcpy(funcionarios[i].ds_senha, ptrString);
+        ptrString = strtok(NULL, "|");
+        funcionarios[i].tp_funcionario = atoi(ptrString);
+        ptrString = strtok(NULL, "|");
+    }
+    indice = qtdLinhas + 1;
+
     // fechando o arquivo
     fclose(ptrArq);
 }
@@ -321,7 +303,6 @@ void menuSuperior(int tamCorpo, char strMenu[], int borda)
     SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), borda);
     int contaLetras = strlen(strMenu);
     tamCorpo = (tamCorpo - contaLetras) / 2;
-
     printf("%c", 201);
     printf("%c", 205);
     for (i = 0; i < tamCorpo; i++)
@@ -368,46 +349,89 @@ void menuInferior(int tamCorpo, int borda)
 int login()
 {
     fflush(stdin);
-    char login[15];
-    char senha[15];
+    char login[qtdMaxLS];
+    char senha[qtdMaxLS];
+    int ch;
 
     // Criando menu do login
-    menuSuperior(TAM_CORPO_LOGIN, "LOGIN", 0);
-    system("color 0F");
-    menuCorpo(TAM_CORPO_LOGIN, "Login: ", 0, 0);
-    system("color 0F");
+    menuSuperior(TAM_CORPO_LOGIN, "GERENCIADOR ODONTO", 2);
+
+    menuCorpo(TAM_CORPO_LOGIN, "Login: ", 2, 7);
     // Adiciona ║ antes e depois de pedir login
     printf("%c", 186);
-    scanf("%s", login);
-    printf("%c", 186);
 
-    // preenche um linha somente de espaco
+    // while para pegar cada caractere digitado e armazenar na "string" de login, caso seja diferente da tecla enter (ascii: 13)
+    i = 0;
+    while ((ch = getch()) != 13)
+    {
+        // se não usuario não apagou(ascii: 8), ele preenche o login, se não ele volta um caracter, preeenche com ' ' e volta o cursor para ' '.
+        if (ch != 8)
+        {
+            login[i] = ch;
+            i++;
+            printf("%c", ch);
+        }
+        else
+        {
+            // verifico se é diferente de 1, para não apagar a barra lateral do menu (║)
+            if (strlen(login) != 1)
+            {
+                putchar(8);
+                putchar(' ');
+                putchar(8);
+                login[i--] = '\0';
+            }
+        }
+    }
+    // atribuindo um terminador.
+    login[i] = '\0';
 
-    for (i = 0; i < TAM_CORPO_LOGIN; i++)
+    int contaLetras = strlen(login);
+    // termina de preencher a linha com espaco
+    for (i = 0; i < (TAM_CORPO_LOGIN - contaLetras); i++)
         printf("%c", 32);
-
     // Adiciona ║ depois para fechar a linha
     printf("%c\n", 186);
 
-    menuCorpo(TAM_CORPO_LOGIN, "Senha: ", 0, 0);
-    system("color 0F");
+    menuCorpo(TAM_CORPO_LOGIN, "Senha: ", 2, 7);
 
     // Adiciona ║ antes e depois de pedir senha
     printf("%c", 186);
-    scanf("%s", senha);
-    printf("%c", 186);
-    // preenche um linha somente de espaco
-    for (i = 0; i < TAM_CORPO_LOGIN; i++)
+    // while para pegar cada caractere digitado, armazena na "string" de senha e substituir por asterisco.
+    i = 0;
+    while ((ch = getch()) != 13)
+    {
+        // se não usuario não apagou, ele preenche o senha ee printa '*' para esconder a senha, se não ele volta um caracter, preeenche com ' ' e volta o cursor para ' '.
+        if (ch != 8)
+        {
+            senha[i] = ch;
+            i++;
+            printf("*");
+        }
+        else
+        {
+            // verifico se é diferente de 1, para não apagar a barra lateral do menu (║)
+            if (strlen(senha) != 1)
+            {
+                putchar(8);
+                putchar(' ');
+                putchar(8);
+                senha[i--] = '\0';
+            }
+        }
+    }
+    senha[i] = '\0';
+    contaLetras = strlen(senha);
+    for (i = 0; i < (TAM_CORPO_LOGIN - contaLetras); i++)
         printf("%c", 32);
     // Adiciona ║ depois para fechar a linha
     printf("%c\n", 186);
 
-    menuInferior(TAM_CORPO_LOGIN, 0);
-    system("color 0F");
+    menuInferior(TAM_CORPO_LOGIN, 2);
 
     // percorre o arquivo e atribui os conteudos em struct
     leArqLogin();
-
+    system("pause");
     // percorremos a struct funcionarios para validar o login
     for (i = 0; i <= qtdLinhas; i++)
     {
@@ -423,7 +447,7 @@ int login()
     {
         menuSuperior(TAM_CORPO_LOGIN, "DADOS ERRADOS", 0);
         system("color 4");
-        menuInferior(TAM_CORPO_LOGIN, 0);
+        menuInferior(TAM_CORPO_LOGIN + 1, 0);
         system("color 4");
         system("pause");
         system("cls");
@@ -653,7 +677,7 @@ void cadastrar_clientes()
     system("pause");
 }
 
-// função para abrir um cliente e enviar os arquivos para o servidor salvar.
+// função para se conectar com o servidor e enviar os arquivos salvar.
 int backupArquivosSOCKET()
 {
     WSAStartup(MAKEWORD(2, 0), &wsa_data);
@@ -674,41 +698,28 @@ int backupArquivosSOCKET()
 
     printf("CONECTADO COM SERVIDOR\n");
 
-    FILE *ptrArq;
-    // Registro de cadastro
-    ptrArq = fopen("registroLS.txt", "r");
+    ptrArq = ptrAbreArquivo('b', "registroLS.txt");
 
     char ptrString[500];
     char strLinha[500];
 
-    // Verifica se o arquivo existe ou foi aberto com sucesso.
-    if (ptrArq)
+    while (fgets(strLinha, 100, ptrArq) != 0)
     {
-        while (fgets(strLinha, 100, ptrArq) != 0)
-        {
-            strcat(ptrString, strLinha);
-        }
+        strcat(ptrString, strLinha);
     }
-    else
-        printf("\nFalha ao ler ou criar o arquivo de backup!\n");
 
     send(server, ptrString, strlen(ptrString), 0);
     printf("BACKUP DOS FUNCIONARIOS REALIZADO COM SUCESSO\n");
     fclose(ptrArq);
 
-    //limpando array para não ir residuos de funcionarios
-    memset(ptrString, 0, sizeof (ptrString));
-    ptrArq = fopen("registroClientes.txt", "r");
+    // limpando array para não ir residuos de funcionarios
+    memset(ptrString, 0, sizeof(ptrString));
+    ptrArq = ptrAbreArquivo('b', "registroClientes.txt");
 
-    if (ptrArq)
+    while (fgets(strLinha, 100, ptrArq) != 0)
     {
-        while (fgets(strLinha, 100, ptrArq) != 0)
-        {
-            strcat(ptrString, strLinha);
-        }
+        strcat(ptrString, strLinha);
     }
-    else
-        printf("\nFalha ao ler ou criar o arquivo de backup!\n");
 
     send(server, ptrString, strlen(ptrString), 0);
     printf("BACKUP DOS CLIENTES REALIZADO COM SUCESSO\n");
@@ -724,6 +735,7 @@ int backupArquivosSOCKET()
 void menuFundadores()
 {
     system("cls");
+
     menuSuperior(TAM_CORPO_MENU, "FUNDADORES", COR_FUNDADOR);
     menuCorpo(TAM_CORPO_MENU, "[ITEM] - Escolha um item do menu", COR_FUNDADOR, COR_INTERNA_MENU);
     menuCorpo(TAM_CORPO_MENU, "[1] - Cadastrar novo funcionario", COR_FUNDADOR, COR_INTERNA_MENU);
@@ -791,21 +803,11 @@ void menuRecepcionista()
 
 void anexanoarquivo(int linha)
 {
-    FILE *ptrArq;
-    // Registro de cadastro
-    ptrArq = fopen("registroClientes.txt", "w");
-    // Verifica se o arquivo existe ou foi aberto com sucesso.
-    if (ptrArq)
+    ptrArq = ptrAbreArquivo('w', "registroClientes.txt");
+    for (i = 0; i < linha; i++)
     {
-        for (i = 0; i < linha; i++)
-        {
-            // retira -1 por conta do \n do final da string
-
-            fprintf(ptrArq, "%d|%s|%s|%s|%d\n", i, clientes[i].nm_cliente, clientes[i].celular, clientes[i].ds_servico, clientes[i].cd_id_funcionario);
-        }
+        fprintf(ptrArq, "%d|%s|%s|%s|%d\n", i, clientes[i].nm_cliente, clientes[i].celular, clientes[i].ds_servico, clientes[i].cd_id_funcionario);
     }
-    else
-        printf("\nFalha ao ler arquivo!\n");
     // fechando o arquivo
     fclose(ptrArq);
 }
@@ -816,25 +818,20 @@ void listaClientesDentista(int clientes_emEspera)
 
     for (i = 0; i < indiceClientes; i++)
     {
-        if (strcmp(clientes[i].ds_servico, " ") != clientes_emEspera)
+        if (strcmp(clientes[i].ds_servico, " ") == 0 && clientes_emEspera == 1)
         {
-            if (clientes_emEspera)
-            {
-                printf("\n::-------------------------------------------------------------------::");
-                printf("\n::Codigo: [%d] - Nome: %s - Celular: %s ", clientes[i].cd_id, clientes[i].nm_cliente, clientes[i].celular);
-                count++;
-            }
-            else
-            {
-                if (clientes[i].cd_id_funcionario == id_funcionario)
-                {
-                    printf("\n::-------------------------------------------------------------------::");
-                    printf("\n::Codigo: [%d] - Nome: %s", clientes[i].cd_id, clientes[i].nm_cliente);
-                    printf("\n::Celular: %s", clientes[i].celular);
-                    printf("\n::Procedimento realizado: %s", clientes[i].ds_servico);
-                    count++;
-                }
-            }
+            printf("\n::-------------------------------------------------------------------::");
+            printf("\n::Codigo: [%d] - Nome: %s - Celular: %s ", clientes[i].cd_id, clientes[i].nm_cliente, clientes[i].celular);
+            count++;
+        }
+
+        if (clientes[i].cd_id_funcionario == id_funcionario && clientes_emEspera == 0)
+        {
+            printf("\n::-------------------------------------------------------------------::");
+            printf("\n::Codigo: [%d] - Nome: %s", clientes[i].cd_id, clientes[i].nm_cliente);
+            printf("\n::Celular: %s", clientes[i].celular);
+            printf("\n::Procedimento realizado: %s", clientes[i].ds_servico);
+            count++;
         }
     }
 
@@ -852,31 +849,40 @@ void anexaProcedimento()
 {
     int id;
     int count = 0;
+    // percorre todos os indices de clientes que tenham procedimento a serem realizados
     for (i = 0; i < indiceClientes; i++)
     {
-        if (!strcmp(clientes[i].ds_servico, " "))
+        if (strcmp(clientes[i].ds_servico, " ") == 0)
         {
             printf("\n::-------------------------------------------------------------------::");
             printf("\n::Codigo: [%d] - Nome: %s - Celular: %s ", clientes[i].cd_id, clientes[i].nm_cliente, clientes[i].celular);
             count++;
         }
     }
+
     if (count)
     {
         printf("\n::-------------------------------------------------------------------::\n");
-        printf("\nDigite o codigo do cliente para anexar um procedimento realizado: \n");
-        scanf(" %d", &id);
-        while (isdigit(id) || (id < 0 || id > count))
-        {
-            fflush(stdin);
-            printf("\nDigite um codigo existente: \n");
-            scanf(" %d", &id);
-        }
+        printf("\nDeseja registrar um procedimento? SIM ou NAO? \n");
         fflush(stdin);
-        printf("\nDigite o procedimento realizado:\n");
-        gets(clientes[id].ds_servico);
-        clientes[id].cd_id_funcionario = id_funcionario;
-        anexanoarquivo(indiceClientes);
+        resposta = getchar();
+        fflush(stdin);
+        if (resposta == 's' || resposta == 'S')
+        {
+            printf("\nDigite o codigo do cliente para anexar um procedimento realizado: \n");
+            scanf(" %d", &id);
+            while (isdigit(id) || (id >= indiceClientes))
+            {
+                fflush(stdin);
+                printf("\nDigite um codigo existente: \n");
+                scanf(" %d", &id);
+            }
+            printf("\nDigite o procedimento realizado:\n");
+            fflush(stdin);
+            gets(clientes[id].ds_servico);
+            clientes[id].cd_id_funcionario = id_funcionario;
+            anexanoarquivo(indiceClientes);
+        }
     }
     else
         printf("\n::---------------------NAO TEM CLIENTES NA ESPERA--------------------::\n\n");
