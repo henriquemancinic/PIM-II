@@ -79,7 +79,7 @@ void descriptografa(char strMensagem[])
     // convertendo toda a mensagem que está char para int até o final da mensagem e atribui a um vetor de int.
     for (i = 0; strMensagem[i] != '\0'; i++)
     {
-        // se o primeiro char for par ''
+        // se o primeiro indice for par, ele é uma linha, se não preenche como coluna
         if (indice % 2 == 0)
         {
             switch (strMensagem[i])
@@ -176,8 +176,8 @@ Clientes clientes[50];
 
 FILE *ptrAbreArquivo(char modo, char localArq[30])
 {
-    // deixando arquivo
-    SetFileAttributes(localArq, FILE_ATTRIBUTE_HIDDEN);
+    // desoculta oa arquivo para manipular
+    SetFileAttributes(localArq, FILE_ATTRIBUTE_NORMAL);
     switch (modo)
     {
     case 'a':
@@ -197,6 +197,8 @@ FILE *ptrAbreArquivo(char modo, char localArq[30])
         printf("Erro ao tentar criar ou abrir arquivo!");
         exit(1);
     }
+    // oculta o arquivo após manipular
+    SetFileAttributes(localArq, FILE_ATTRIBUTE_HIDDEN);
 
     return ptrArq;
 }
@@ -470,18 +472,17 @@ int verificaLogin(char login[])
 
 void buscar_funcionarios()
 {
-    // verificar essa l�gica // começar em 1 para eliminar de mostrar os usuarios fundadores
-    for (i = 1; i < indice; i++)
+    leArqLogin();
+
+    // começa em 2 para não mostrar os fundadores
+    for (i = 2; i < indice; i++)
     {
-        if (funcionarios[i].tp_funcionario != 0)
-        {
-            printf("\n::----------------------------------------------::");
-            printf("\n::NOME: %s", funcionarios[i].nm_funcionario);
-            printf("\n::LOGIN: %s", funcionarios[i].ds_login);
-            descriptografa(funcionarios[i].ds_senha);
-            printf("\n::SENHA: %s", funcionarios[i].ds_senha);
-            printf("\n::----------------------------------------------::\n");
-        }
+        printf("\n::----------------------------------------------::");
+        printf("\n::NOME: %s", funcionarios[i].nm_funcionario);
+        printf("\n::LOGIN: %s", funcionarios[i].ds_login);
+        descriptografa(funcionarios[i].ds_senha);
+        printf("\n::SENHA: %s", funcionarios[i].ds_senha);
+        printf("\n::----------------------------------------------::\n");
     }
     system("pause");
 }
@@ -489,7 +490,7 @@ void buscar_funcionarios()
 void buscar_clientes()
 {
     leArqClientes();
-    // verificar essa l�gica // começar em 1 para eliminar de mostrar os usuarios fundadores
+
     for (i = 0; i < indiceClientes; i++)
     {
         printf("\n::-------------------------------------------------------------------::");
@@ -804,6 +805,7 @@ void menuRecepcionista()
 void anexanoarquivo(int linha)
 {
     ptrArq = ptrAbreArquivo('w', "registroClientes.txt");
+
     for (i = 0; i < linha; i++)
     {
         fprintf(ptrArq, "%d|%s|%s|%s|%d\n", i, clientes[i].nm_cliente, clientes[i].celular, clientes[i].ds_servico, clientes[i].cd_id_funcionario);
