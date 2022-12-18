@@ -1,6 +1,25 @@
 # PIM-II
 Criação de um programa em C, com telas de login, menu, relatórios, cadastrar funcionários, clientes e um plus que é realizar uma comunicação cliente-servidor via sockets por TCP/IP e a realização do NAS
 
+## PRINCIPAIS TELAS DO PROJETO
+O software possui três níveis de usuários e um total de 13 telas.
+
+- **Login**
+
+	<img src="https://user-images.githubusercontent.com/55888586/208312223-b23ac2f1-82c9-4c04-bbd8-dc0369b214bf.png"  width="500">
+
+- **Fundador**
+
+	<img src="https://user-images.githubusercontent.com/55888586/208311585-aa3fa784-aecc-4d64-a529-e31fa3b33c35.png"  width="500">
+
+- **Recepcionista**
+
+	<img src="https://user-images.githubusercontent.com/55888586/208311620-138e3b25-a46e-46f4-b69e-471d4d8de945.png"  width="500">
+
+- **Dentista**
+
+	<img src="https://user-images.githubusercontent.com/55888586/208311630-a78980fd-0f03-4033-a684-aad044134a2c.png"  width="500">
+
 ## COMPILANDO O PROJETO
 	
 Como o software faz o uso de bibliotecas especificas como winsock, para realizar as comunicações com o servidor via sockets tcp/ip, precisamos linkar a biblioteca ao nosso ambiente de compilação.
@@ -45,3 +64,6 @@ Após copiar a estrutura, salve no mesmo diretório em que o sistema está local
 
 
 Feito isto, é só entrar no sistema utilizando o login desejado, caso queira entrar com o login de fundador, poderá utilizar os logins fnd0 e fnd1, as senhas estão criptografadas, mas não se preocupe, pois o login e senha estão iguais.
+
+## LINK DA DOCUMENTAÇÃO
+https://drive.google.com/file/d/1eqtrhjDpyP-EN95SpRWqHmD0mq1hxxX8/view
